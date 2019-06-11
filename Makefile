@@ -112,7 +112,7 @@ COVER_REPORT_OPTS ?= -select_re ^lib/
 
 .PHONY: travis-codecov
 travis-codecov: coverage
-	cover $(COVER_REPORT_OPTS) -report codecov
+	#cover $(COVER_REPORT_OPTS) -report codecov
 
 .PHONY: coverage-html
 coverage-html: coverage
