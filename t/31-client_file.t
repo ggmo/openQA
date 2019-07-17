@@ -156,9 +156,9 @@ subtest 'verify_chunks' => sub {
     is(OpenQA::Files->verify_chunks($t_dir => $copied_file), undef, 'Verify chunks passes');
     $copied_file->spurt('');
 
-    is(
-        OpenQA::Files->verify_chunks($t_dir => $copied_file)->message(),
-        'Can\'t verify written data from chunk',
+    like(
+        OpenQA::Files->verify_chunks($t_dir => $copied_file),
+        qr/^Can't verify written data from chunk/,
         'Cannot verify chunks passes'
     );
     is $copied_file->slurp, '', 'File is empty now';

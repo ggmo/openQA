@@ -92,6 +92,7 @@ our @EXPORT  = qw(
   in_range
   walker
   &ensure_timestamp_appended
+  safe_isa
   set_listen_address
   service_port
 );
@@ -1234,6 +1235,8 @@ sub param_hash {
     return unless (%hash);
     return \%hash;
 }
+
+sub safe_isa { blessed $_[0] && $_[0]->isa($_[1]) }
 
 sub any_array_item_contained_by_hash {
     my ($array, $hash) = @_;

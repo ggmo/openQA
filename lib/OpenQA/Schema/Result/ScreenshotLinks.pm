@@ -102,7 +102,6 @@ sub populate_images_to_job {
         }
         catch {
             # it's possible 2 jobs are creating the link at the same time
-            my $error = shift;
             $ids{$img} = $schema->resultset('Screenshots')->find({filename => $img})->id;
         };
     }

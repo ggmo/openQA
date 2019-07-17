@@ -16,9 +16,11 @@
 
 package OpenQA::WebAPI::Controller::API::V1::JobTemplate;
 use Mojo::Base 'Mojolicious::Controller';
+
 use Try::Tiny;
 use JSON::Validator;
 use Text::Diff;
+use OpenQA::Utils 'safe_isa';
 
 =pod
 
@@ -251,7 +253,9 @@ sub update {
     }
     catch {
         # Push the exception to the list of errors without the trailing new line
-        push @$errors, substr($_, 0, -1);
+        my $err = safe_isa($_, 'Mojo::Exception') ? $_->message : "$_";
+        chomp $err;
+        push @$errors, $err;
     };
 
     if (@$errors) {
@@ -408,7 +412,9 @@ sub update {
     }
     catch {
         # Push the exception to the list of errors without the trailing new line
-        push @$errors, substr($_, 0, -1);
+        my $err = safe_isa($_, 'Mojo::Exception') ? $_->message : "$_";
+        chomp $err;
+        push @$errors, $err;
     };
 
     if (@$errors) {

@@ -26,11 +26,12 @@ BEGIN {
 use FindBin;
 use lib "$FindBin::Bin/lib";
 use OpenQA::Utils;
-use OpenQA::Utils qw(random_string random_hex);
+use OpenQA::Utils qw(random_string random_hex safe_isa);
 use OpenQA::Test::Utils 'redirect_output';
 use Test::More;
 use Scalar::Util 'reftype';
 use Mojo::File qw(path tempdir tempfile);
+use Mojo::Exception;
 
 subtest 'service ports' => sub {
     local $ENV{OPENQA_BASE_PORT} = undef;
@@ -77,6 +78,14 @@ subtest 'random number generator' => sub {
     like($r, qr/^[0-9A-F]+$/a, "random_hex only consists of hex characters");
     is(length($r), length($r2), "same length");
     isnt($r, $r2, "random_hex produces different results");
+};
+
+subtest 'safe ISA' => sub {
+    ok !safe_isa('test',   'Mojo::Exception'), 'not an object';
+    ok !safe_isa("test\n", 'Mojo::Exception'), 'not an object';
+    ok !safe_isa(undef,    'Mojo::Exception'), 'not an object';
+    ok safe_isa(Mojo::Exception->new, 'Mojo::Exception'), 'Mojo::Exception object';
+    ok !safe_isa(Mojo::Base->new, 'Mojo::Exception'), 'not an Mojo::Exception object';
 };
 
 is bugurl('bsc#1234'), 'https://bugzilla.suse.com/show_bug.cgi?id=1234', 'bug url is properly expanded';
