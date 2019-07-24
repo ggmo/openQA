@@ -122,7 +122,7 @@ COVER_REPORT_OPTS ?= -select_re ^lib/
 
 .PHONY: coverage-codecov
 coverage-codecov: coverage
-	cover $(COVER_REPORT_OPTS) -report codecov
+	cover $(COVER_REPORT_OPTS)
 
 .PHONY: coverage-html
 coverage-html: coverage
