@@ -529,8 +529,6 @@ sub create_artefact {
     }
     elsif ($self->param('asset')) {
         $self->render_later;    # XXX: Not really needed, but in case of upstream changes
-        my @ioloop_evs = qw(events);
-        my @evs        = @{Mojo::IOLoop->singleton}{@ioloop_evs};
 
         # See: https://mojolicious.org/perldoc/Mojolicious/Guides/FAQ#What-does-Connection-already-closed-mean
         my $tx = $self->tx;     # NOTE: Keep tx around as long operations could make it disappear
@@ -538,7 +536,6 @@ sub create_artefact {
         return Mojo::IOLoop->subprocess(
             sub {
                 die "Transaction empty" if $tx->is_empty;
-                @{Mojo::IOLoop->singleton}{@ioloop_evs} = @evs;
                 OpenQA::Events->singleton->emit('chunk_upload.start' => $self);
                 my ($e, $fname, $type, $last) = $job->create_asset($self->param('file'), $self->param('asset'));
                 OpenQA::Events->singleton->emit('chunk_upload.end' => ($self, $e, $fname, $type, $last));

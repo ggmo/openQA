@@ -116,7 +116,7 @@ subtest 'recompose in-place' => sub {
             $sha = $chunk->total_cksum;
         });
 
-    is $sha, OpenQA::File::_file_digest($copied_file->to_string), 'SHA-1 Matches';
+    is $sha, OpenQA::File->file_digest($copied_file->to_string), 'SHA-1 Matches';
 
     is $original->slurp, Mojo::File->new($copied_file)->slurp, 'Same content';
 
