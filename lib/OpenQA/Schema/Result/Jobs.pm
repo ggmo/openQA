@@ -252,15 +252,22 @@ sub delete {
         log_debug "Skipping deleting screenshots, migration is in progress";
     }
     else {
-        my $fns = $schema->resultset('Screenshots')->search(
-            {id => {-in => \@ids}},
-            {
-                join     => 'links_outer',
-                group_by => 'me.id',
-                having   => \['COUNT(links_outer.job_id) = 0']});
-        while (my $sc = $fns->next) {
-            $sc->delete;
-        }
+        $schema->storage->dbh_do(
+            sub {
+                my ($storage, $dbh) = @_;
+                $dbh->do(
+                    q{DELETE FROM screenshots WHERE (
+                          id IN (
+                              SELECT me.id
+                              FROM screenshots me
+                              LEFT OUTER JOIN screenshot_links links_outer ON links_outer.screenshot_id = me.id
+                              WHERE id = ANY ($1)
+                              GROUP BY me.id
+                              HAVING COUNT(links_outer.job_id) = 0
+                          )
+                      )}, {}, \@ids
+                );
+            });
     }
     my $ret = $self->SUPER::delete;
 
