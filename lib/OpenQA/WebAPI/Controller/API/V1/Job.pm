@@ -412,7 +412,7 @@ sub update_status {
 
     my $ret;
     try {
-        $ret = $job->update_status($status);
+        $ret = $job->update_status($status, $self);
     }
     catch {
         my $error_message = $_;

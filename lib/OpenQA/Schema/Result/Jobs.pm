@@ -1364,7 +1364,18 @@ sub failed_modules {
 }
 
 sub update_status {
-    my ($self, $status) = @_;
+    my ($self, $status, $c) = @_;
+
+    my $id  = $self->id;
+    my $rid = $c->req->request_id;
+    OpenQA::Utils::log_warning(qq{[$rid] PROFILE "POST /api/v1/jobs/$id/status"});
+    my $begin = sub { $c->timing->begin(shift) };
+    my $end   = sub {
+        my $name    = shift;
+        my $elapsed = $c->timing->elapsed($name);
+        my $rps     = $c->timing->rps($elapsed);
+        OpenQA::Utils::log_warning("[$rid] TIMING $name: $elapsed seconds ($rps/s)");
+    };
 
     my $ret = {result => 1};
     if (!$self->worker) {
@@ -1381,41 +1392,65 @@ sub update_status {
     # that is a bit of an abuse as we don't have anything of the
     # other payload
     if ($status->{uploading}) {
+        $begin->('uploading');
         $self->update({state => UPLOADING});
+        $end->('uploading');
         return $ret;
     }
 
-    $self->append_log($status->{log},             "autoinst-log-live.txt");
-    $self->append_log($status->{serial_log},      "serial-terminal-live.txt");
+    $begin->('append_log');
+    $self->append_log($status->{log}, "autoinst-log-live.txt");
+    $end->('append_log');
+    $begin->('append_serial_log');
+    $self->append_log($status->{serial_log}, "serial-terminal-live.txt");
+    $end->('append_serial_log');
+    $begin->('append_serial_terminal');
     $self->append_log($status->{serial_terminal}, "serial-terminal-live.txt");
+    $end->('append_serial_terminal');
     # delete from the hash so it becomes dumpable for debugging
     my $screen = delete $status->{screen};
-    $self->save_screenshot($screen)                   if $screen;
-    $self->update_backend($status->{backend})         if $status->{backend};
+    $begin->('save_screenshot');
+    $self->save_screenshot($screen) if $screen;
+    $end->('save_screenshot');
+    $begin->('update_backend');
+    $self->update_backend($status->{backend}) if $status->{backend};
+    $end->('update_backend');
+    $begin->('insert_test_modules');
     $self->insert_test_modules($status->{test_order}) if $status->{test_order};
+    $end->('insert_test_modules');
     my %known;
     if ($status->{result}) {
+        $begin->('update_modules');
         while (my ($name, $result) = each %{$status->{result}}) {
             my $existent = $self->update_module($name, $result) || [];
             for (@$existent) { $known{$_} = 1; }
         }
+        $end->('update_modules');
     }
     $ret->{known_images} = [sort keys %known];
 
     # mark the worker as alive
+    $begin->('worker_seen');
     $self->worker->seen;
+    $end->('worker_seen');
 
     # update info used to compose the URL to os-autoinst command server
     if (my $assigned_worker = $self->assigned_worker) {
+        $begin->('set_properties');
         $assigned_worker->set_property(CMD_SRV_URL     => ($status->{cmd_srv_url}     // ''));
         $assigned_worker->set_property(WORKER_HOSTNAME => ($status->{worker_hostname} // ''));
+        $end->('set_properties');
     }
 
+    $begin->('update_state');
     $self->state(RUNNING) and $self->t_started(now()) if grep { $_ eq $self->state } (ASSIGNED, SETUP);
     $self->update();
+    $end->('update_state');
 
     # result=1 for the call, job_result for the current state
+    $begin->('calculate_result');
     $ret->{job_result} = $self->calculate_result();
+    $end->('calculate_result');
 
     return $ret;
 }
