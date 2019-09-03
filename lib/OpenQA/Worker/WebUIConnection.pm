@@ -417,7 +417,7 @@ sub send_artefact {
     my ($self, $job_id, $form) = @_;
 
     my $md5 = $form->{md5};
-    log_debug("Uploading artefact $form->{file}{filename}" . ($md5 ? " as $md5" : ''));
+    log_info("Uploading artefact $form->{file}{filename}" . ($md5 ? " as $md5" : ''));
 
     my $ua  = $self->ua;
     my $url = $self->url->clone;
