@@ -657,6 +657,7 @@ sub _upload_results {
 
 sub _upload_results_step_0_prepare {
     my ($self, $is_final_upload, $status_from_os_autoinst, $callback) = @_;
+    log_debug('Preparing result uploads');
 
     my $worker_id       = $self->client->worker_id;
     my $job_url         = $self->isotovideo_client->url;
@@ -783,15 +784,21 @@ sub _upload_results_step_1_post_status {
 
 sub _upload_results_step_2_upload_images {
     my ($self, $callback) = @_;
+    log_debug('Starting artefact uploads');
+
+    my $images_to_send = $self->images_to_send;
+    $self->{_images_to_send} = {};
+    my $files_to_send = $self->files_to_send;
+    $self->{_files_to_send} = [];
 
     Mojo::IOLoop->subprocess(
         sub {
             my $job_id = $self->id;
             my $client = $self->client;
+            log_debug("Subprocess $$ is uploading artefacts for $job_id");
 
-            my $pooldir        = $self->worker->pool_directory;
-            my $fileprefix     = "$pooldir/testresults";
-            my $images_to_send = $self->images_to_send;
+            my $pooldir    = $self->worker->pool_directory;
+            my $fileprefix = "$pooldir/testresults";
             for my $md5 (keys %$images_to_send) {
                 my $file = $images_to_send->{$md5};
                 $self->_optimize_image("$fileprefix/$file");
@@ -816,7 +823,7 @@ sub _upload_results_step_2_upload_images {
                 }
             }
 
-            for my $file (@{$self->files_to_send}) {
+            for my $file (@$files_to_send) {
                 my $form = {
                     file => {
                         file     => "$pooldir/testresults/$file",
@@ -831,8 +838,7 @@ sub _upload_results_step_2_upload_images {
         sub {
             my ($subprocess, $err) = @_;
             log_error("Upload images subprocess error: $err") if $err;
-            $self->{_images_to_send} = {};
-            $self->{_files_to_send}  = [];
+            log_debug('Ending artefact uploads');
             $callback->();
         });
 }
@@ -846,6 +852,7 @@ sub _upload_results_step_3_finalize {
         $self->{_upload_results_timer} = Mojo::IOLoop->timer(
             $interval,
             sub {
+                log_debug("Scheduled result upload ($interval seconds interval)");
                 $self->_upload_results(sub { });
             });
     }
@@ -1133,6 +1140,7 @@ sub _read_module_result {
 
     my $result = $self->_read_json_file("result-$test.json");
     return unless $result;
+    log_debug("Reading module result $test");
 
     my $images_to_send = $self->images_to_send;
     my $files_to_send  = $self->files_to_send;
@@ -1148,12 +1156,15 @@ sub _read_module_result {
                     md5  => $md5,
                 };
                 $images_to_send->{$md5} = $file;
+                log_debug("Screenshot $file added");
             }
             else {
                 push(@$files_to_send, $file);
+                log_debug("File $file added");
             }
         }
     }
+    log_debug("Finished reading module result $test");
     return $result;
 }
 
